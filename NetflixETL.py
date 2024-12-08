@@ -111,3 +111,20 @@ print(f'{len(actor_director_stats_dict)} records inserted into MongoDB.')
 # endregion
 
 
+
+# region Tüm datayı ekleyelim
+data = data[~data.isin(['Unkown']).any(axis=1)]
+
+data['cast'] = data['cast'].str.split(',')
+data = data.explode('cast')
+data['country'] = data['country'].str.split(',')
+data = data.explode('country')
+data['director'] = data['director'].str.split(',')
+data = data.explode('director')
+
+df = data.to_dict(orient='records')
+collection4.insert_many(df)
+print(f'{len(df)} records inserted into MongoDB.')
+# endregion
+
+
