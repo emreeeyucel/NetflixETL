@@ -38,17 +38,37 @@ print(data.isna().sum())
 
 # region Hangi yönetmenin çalışmaları daha çok TV Show olarak kategorize edilmiş ve hangi yıllarda yayımlanmış?
 
-# tv_shows = data[data['type'] == 'TV Show'].copy()
-# tv_shows['director'] = tv_shows['director'].str.split(',').explode('director')
-# tv_shows = tv_shows[~tv_shows.isin(['Unkown']).any(axis=1)]
-#
-# director_tv_show_counts = tv_shows.groupby(['director', 'release_year']).size().reset_index(name='count')
-# top_director = director_tv_show_counts.groupby('director')['count'].sum().idxmax()
-# top_director_years = director_tv_show_counts[director_tv_show_counts['director'] == top_director]
-#
-# top_director_years_dict = top_director_years.to_dict(orient='records')
-# collection.insert_many(top_director_years_dict)
-# print(f'{len(top_director_years_dict)} records inserted into MongoDB.')
+
+tv_shows = data[data['type'] == 'TV Show'].copy()
+tv_shows['director'] = tv_shows['director'].str.split(',').explode('director')
+
+director_tv_show = (
+    tv_shows.groupby(['director', 'release_year'])
+    .size()
+    .reset_index(name='show_count')
+)
+
+
+total_tv_shows = (
+    director_tv_show.groupby('director')['show_count']
+    .sum()
+    .reset_index(name='total_shows')
+    .sort_values(by='total_shows', ascending=False)
+)
+
+director_tv_show = director_tv_show.merge(total_tv_shows, on='director')
+
+
+filtered_data = director_tv_show[director_tv_show['director'] != 'Unkown']
+
+
+sorted_data = filtered_data.sort_values(
+    by=['total_shows', 'release_year'], ascending=[False, True]
+)
+
+top_director_years_dict = sorted_data.to_dict(orient='records')
+collection.insert_many(top_director_years_dict)
+print(sorted_data.to_string())
 
 # endregion
 
@@ -56,22 +76,22 @@ print(data.isna().sum())
 
 
 # region En Çok Oyuncuya Sahip Ülkeler
-# df = data[['cast', 'country']].copy()
-#
-# df['cast'] = df['cast'].str.split(',')
-# df['country'] = df['country'].str.split(',')
-# df = df.explode('cast')
-# df = df.explode('country')
-#
-# df = df[(df['cast'] != 'Unkown') & (df['country'] != 'Unkown')]
-#
-# country_unique_cast_count = df.groupby('country')['cast'].nunique().reset_index(name='count').sort_values(by='count', ascending=False)
-# print(country_unique_cast_count)
-#
-# # MongoDB'ye yükleme
-# country_unique_cast_count_dict = country_unique_cast_count.to_dict(orient='records')
-# collection2.insert_many(country_unique_cast_count_dict)
-# print(f'{len(country_unique_cast_count_dict)} records inserted into MongoDB.')
+df = data[['cast', 'country']].copy()
+
+df['cast'] = df['cast'].str.split(',')
+df['country'] = df['country'].str.split(',')
+df = df.explode('cast')
+df = df.explode('country')
+
+df = df[(df['cast'] != 'Unkown') & (df['country'] != 'Unkown')]
+
+country_unique_cast_count = df.groupby('country')['cast'].nunique().reset_index(name='count').sort_values(by='count', ascending=False)
+print(country_unique_cast_count)
+
+# MongoDB'ye yükleme
+country_unique_cast_count_dict = country_unique_cast_count.to_dict(orient='records')
+collection2.insert_many(country_unique_cast_count_dict)
+print(f'{len(country_unique_cast_count_dict)} records inserted into MongoDB.')
 # endregion
 
 
